@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Write},
+    io::{stdin, Write},
     path::PathBuf,
     process::exit,
     fs::File
@@ -36,7 +36,7 @@ fn main() {
 
         println!("Enter the path of the wallpapers");
 
-        io::stdin().read_line(&mut w_input)
+        stdin().read_line(&mut w_input)
             .expect("Error reading path.");
 
         let w_path: PathBuf = PathBuf::from(w_input.trim());
