@@ -31,7 +31,7 @@ fn main() {
     if !conf_path.exists() {
         let mut w_input: String = String::new();
 
-        println!("Enter the path of the wallpapers");
+        println!("Enter the absolute path of the wallpapers");
 
         stdin().read_line(&mut w_input)
             .expect("Error reading path.");
@@ -42,6 +42,11 @@ fn main() {
              println!("The path doesnt exist or its not a directory");
              exit(1);
         }
+
+        fs::DirBuilder::new()
+            .recursive(true)
+            .create(home_dir().expect("Error").join(".config/bgc/"))
+            .unwrap();
 
         let mut c_file = File::create(&conf_path)
             .expect("Error creating file");
