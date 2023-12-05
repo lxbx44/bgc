@@ -2,26 +2,16 @@ use std::{
     io::{stdin, Write},
     path::PathBuf,
     process::exit,
-    fs::{File, self},
-    env
+    fs::{self, File},
+    process::Command
 };
 use dirs::home_dir;
-use terminal_menu::{menu, label, button, run, mut_menu};
+use terminal_menu::{menu, button, run, mut_menu, label};
 
-#[allow(dead_code)]
-fn print_title() {
-    println!("Welcome to Background Changer (bgc)");
-    println!("v{}", env!("CARGO_PKG_VERSION"));
-
-    println!("\nYou can move up and down using 'j' and 'k'");
-    println!("Press 'enter' to select a wallpaper or 'i' to preview the image\n");
-}
-
-#[allow(dead_code)]
-fn get_img(file_path: PathBuf) -> bool {
+fn is_img(file_path: &PathBuf) -> bool {
     let img_files = ["jpeg", "png", "gif", "pnm", "tga", "ttf", "webp", "bmp", "farb", "farbfeld"];
 
-    let a = file_path.extension();
+    let a = &file_path.extension();
 
     if img_files.contains(&a.unwrap().to_str().unwrap()) {
         return true; 
@@ -69,28 +59,110 @@ fn main() {
     let config_file_contents: String = fs::read_to_string(conf_path)
                                 .expect("Error reading file");
     
+    let mut wallpapers_path: PathBuf = PathBuf::new();
+
     for line in config_file_contents.lines() {
-        if line.trim().starts_with("wallpaper_path=") {
+        if line.trim().starts_with("wallpaper_path") {
             let wallpapers_path_s: &str = line
                 .split('=')
                 .nth(1)
                 .map(|s| s.trim())
                 .unwrap_or_default();
 
-            let wallpapers_path: PathBuf = PathBuf::from(wallpapers_path_s);
-                
+            wallpapers_path = PathBuf::from(wallpapers_path_s);
         }
     }
 
-    print_title();
+    if !wallpapers_path.is_dir() {
+        println!("The path stored in the config file is not a path");
+        println!("Config file: ~/.config/bgc/config.conf");
+        println!("Wallpapers directory provided: {}", wallpapers_path.to_str().unwrap());
+        exit(1);
+    }
 
-    let menu = menu(vec![
-        button("Alice"),
-        button("Bob"),
-        button("Charlie")
-    ]);
+    let mut images: Vec<String> = Vec::new();
+    let mut images_p: Vec<PathBuf> = Vec::new();
+
+    for path in fs::read_dir(&wallpapers_path).unwrap() {
+        if let Ok(entry) = path  {
+            let path_buf = entry.path();
+            if is_img(&path_buf) {
+                let str_path: String = String::from(path_buf.to_str().unwrap())
+                    .split('/')
+                    .last()
+                    .unwrap()
+                    .to_string();
+                images.push(str_path);
+                images_p.push(path_buf);
+            }
+        }
+    }
+    
+    let vstring: String = "v".to_string() + env!("CARGO_PKG_VERSION") + "\n";
+
+    let buttons: Vec<_> = images.iter()
+                    .map(|image| button(image))
+                    .collect();
+
+    let mut menu_v = vec![
+        label("-----------------------------------------------------------------"),
+        label("Welcome to Background Changer (bgc)"),
+        label(vstring),
+        label("You can move up and down using 'j' and 'k'"),
+        label("Press 'enter' to select a wallpaper or 'i' to preview the image"),
+        label("-----------------------------------------------------------------\n"),
+    ];
+
+    for element in buttons.into_iter() {
+        menu_v.push(element);
+    }
+    menu_v.push(label(""));
+    
+    menu_v.push(button("Random wallpapers (requires internet connection)"));
+
+    menu_v.push(label(""));
+
+    menu_v.push(button("Quit"));
+
+    let menu = menu(menu_v);
 
     run(&menu);
-    let selected: &str = mut_menu(&menu).selected_item_name();
+
+    let menu_result = mut_menu(&menu);
+    let selected: &str = menu_result.selected_item_name();
+
+    if selected == "Quit" {
+        exit(1);
+    } else if selected == "Random wallpapers (requires internet connection)" {
+        println!("Online wallpapers are still not aviable!");
+        exit(1);
+    }
+
+    let mut selected_path: Option<PathBuf> = None;
+
+    for n in images_p {
+        if n.to_str().unwrap().contains(selected) {
+            selected_path = Some(n);
+            break;
+        }
+    }
+
+    let image_path: String = match selected_path {
+        Some(path) => path.to_string_lossy().to_string(),
+        None => {
+            println!("Selected path not found");
+            exit(1);
+        }
+    };
+
+    Command::new("swww")
+        .arg("img")
+        .arg(&image_path)
+        .arg("--transition-step")
+        .arg("30")
+        .arg("--transition-fps")
+        .arg("60")
+        .spawn()
+        .expect("swww is not installed");
 
 }
