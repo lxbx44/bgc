@@ -2,9 +2,11 @@ use std::{
     io::{stdin, Write},
     path::PathBuf,
     process::exit,
-    fs::File
+    fs::{File, self},
+    env
 };
 use dirs::home_dir;
+use terminal_menu::{menu, label, button, run, mut_menu};
 
 #[allow(dead_code)]
 fn print_title() {
@@ -15,6 +17,7 @@ fn print_title() {
     println!("Press 'enter' to select a wallpaper or 'i' to preview the image\n");
 }
 
+#[allow(dead_code)]
 fn get_img(file_path: PathBuf) -> bool {
     let img_files = ["jpeg", "png", "gif", "pnm", "tga", "ttf", "webp", "bmp", "farb", "farbfeld"];
 
@@ -25,6 +28,9 @@ fn get_img(file_path: PathBuf) -> bool {
     }
 
     false
+}
+fn clear_screen() {
+    print!("\x1B[2J\x1B[1;1H");
 }
 
 fn main() {
@@ -56,5 +62,35 @@ fn main() {
 
         c_file.flush()
             .expect("Error flushing file");
+
+        clear_screen();
     } 
+
+    let config_file_contents: String = fs::read_to_string(conf_path)
+                                .expect("Error reading file");
+    
+    for line in config_file_contents.lines() {
+        if line.trim().starts_with("wallpaper_path=") {
+            let wallpapers_path_s: &str = line
+                .split('=')
+                .nth(1)
+                .map(|s| s.trim())
+                .unwrap_or_default();
+
+            let wallpapers_path: PathBuf = PathBuf::from(wallpapers_path_s);
+                
+        }
+    }
+
+    print_title();
+
+    let menu = menu(vec![
+        button("Alice"),
+        button("Bob"),
+        button("Charlie")
+    ]);
+
+    run(&menu);
+    let selected: &str = mut_menu(&menu).selected_item_name();
+
 }
