@@ -19,6 +19,7 @@ fn is_img(file_path: &PathBuf) -> bool {
 
     false
 }
+
 fn clear_screen() {
     print!("\x1B[2J\x1B[1;1H");
 }
@@ -62,6 +63,7 @@ fn main() {
     let mut wallpapers_path: PathBuf = PathBuf::new();
 
     for line in config_file_contents.lines() {
+        // GET WALLPAPER PATH
         if line.trim().starts_with("wallpaper_path") {
             let wallpapers_path_s: &str = line
                 .split('=')
@@ -118,7 +120,7 @@ fn main() {
     }
     menu_v.push(label(""));
     
-    menu_v.push(button("Random wallpapers (requires internet connection)"));
+    menu_v.push(button("Online wallpaper"));
 
     menu_v.push(label(""));
 
@@ -133,9 +135,9 @@ fn main() {
 
     if selected == "Quit" {
         exit(1);
-    } else if selected == "Random wallpapers (requires internet connection)" {
-        println!("Online wallpapers are still not aviable!");
-        exit(1);
+    } else if selected == "Online wallpaper" {
+        println!("Online wallpaper not aviable yet");
+        exit(0);
     }
 
     let mut selected_path: Option<PathBuf> = None;
