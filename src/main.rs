@@ -3,13 +3,13 @@ use std::{
     path::PathBuf,
     process::exit,
     fs::{self, File},
-    process::Command
+    process::Command, vec
 };
 use dirs::home_dir;
 use terminal_menu::{menu, button, run, mut_menu, label};
 
 fn is_img(file_path: &PathBuf) -> bool {
-    let img_files = ["jpeg", "png", "gif", "pnm", "tga", "ttf", "webp", "bmp", "farb", "farbfeld"];
+    let img_files: Vec<&str> = vec!["jpeg", "jpg", "png", "gif", "pnm", "tga", "ttf", "webp", "bmp", "farb", "farbfeld"];
 
     let a = &file_path.extension();
 
