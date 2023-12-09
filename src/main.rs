@@ -8,7 +8,7 @@ use std::{
 };
 use dirs::home_dir;
 use terminal_menu::{menu, button, run, mut_menu, label};
-use clap::{Parser, Command};
+use clap::Parser;
 
 
 /// A program written in Rust to change wallpapers in wayland using swww
