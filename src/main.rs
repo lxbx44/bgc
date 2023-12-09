@@ -48,16 +48,17 @@ fn main() {
             .expect("Error reading to string");
         let mut wall_path: PathBuf = PathBuf::new();
 
-        for line in cfc.lines() {
-            if line.trim().starts_with("prev_wallpaper") {
-                let wallpapers_path_s: &str = line
-                    .split('=')
-                    .nth(1)
-                    .expect("No wallpaper_path on config file");
+        cfc.lines()
+            .filter(|x| x.trim().starts_with("prev_wallpaper"))
+            .for_each(|line| {
+                match line.split('=').last() {
+                    Some(wallpaper_path_s) => {
+                        wall_path = PathBuf::from(wallpaper_path_s.trim());
+                    },
+                    None => panic!("No wallpaper_path on config file"),
+                };
+            });
 
-                wall_path = PathBuf::from(wallpapers_path_s.trim());
-            }
-        }
 
         match Command::new("swww")
                 .arg("init")
@@ -133,7 +134,7 @@ fn main() {
     } 
 
     let config_file_contents: String = fs::read_to_string(conf_path.clone())
-                                .unwrap();
+                                            .unwrap();
     
     let mut wallpapers_path: PathBuf = PathBuf::new();
     let mut other_wall: bool = false;
@@ -161,22 +162,17 @@ fn main() {
     let mut images: Vec<String> = Vec::new();
     let mut images_p: Vec<PathBuf> = Vec::new();
 
-    for path in fs::read_dir(&wallpapers_path).expect("Couldn't read directory") {
-        if let Ok(entry) = path {
-            let path_buf = entry.path();
-            if is_img(&path_buf) {
-                let str_path: String = String::from(path_buf.to_str()
-                                                    .expect("Error converting to string")
-                                                )
-                    .split('/')
-                    .last()
-                    .expect("Error geting &str")
-                    .to_string();
-                images.push(str_path);
-                images_p.push(path_buf);
+    fs::read_dir(&wallpapers_path)
+        .expect("Couldn't read directory")
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| is_img(&entry.path()))
+        .for_each(|entry| {
+            let entry_p: PathBuf = entry.path();
+            if let Some(entry_string) = entry_p.file_name().and_then(|x| x.to_str()) {
+                images.push(entry_string.to_string());
+                images_p.push(entry_p);
             }
-        }
-    }
+        });
     
     let vstring: String = "v".to_string() + env!("CARGO_PKG_VERSION") + "\n";
 
@@ -194,9 +190,8 @@ fn main() {
         label("-----------------------------------------------------------------\n"),
     ];
 
-    for element in buttons.into_iter() {
-        menu_v.push(element);
-    }
+    menu_v.extend(buttons.into_iter());
+
     menu_v.push(label(""));
     
     menu_v.push(button("Online wallpaper"));
@@ -218,14 +213,13 @@ fn main() {
         exit(0);
     }
 
-    let mut selected_path: Option<PathBuf> = None;
-
-    for n in images_p {
-        if n.to_str().unwrap().contains(selected) {
-            selected_path = Some(n);
-            break;
-        }
-    }
+    let selected_path: Option<PathBuf> = images_p
+        .into_iter()
+        .find(|x| {
+            x.to_str()
+                .unwrap_or_default()
+                .contains(selected)
+        });
 
     let image_path: String = match selected_path {
         Some(path) => path.to_string_lossy().to_string(),
@@ -277,8 +271,4 @@ fn main() {
             .write(new_data_file.as_bytes())
             .expect("Error writing data to file");
     }
-    
-
-
-
 }
