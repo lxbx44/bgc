@@ -4,10 +4,22 @@ use std::{
     path::PathBuf,
     process::exit,
     fs::{self, File},
-    process::Command, vec
+    process::Command
 };
 use dirs::home_dir;
 use terminal_menu::{menu, button, run, mut_menu, label};
+use clap::Parser;
+
+
+/// A program written in Rust to change wallpapers in wayland using swww
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Args {
+    /// Flag to execute to get last wallpaper set
+    #[arg(short, long, default_value_t = false)]
+    set: bool
+}
+
 
 fn is_img(file_path: &PathBuf) -> bool {
     let img_files: Vec<&str> = vec!["jpeg", "jpg", "png", "gif", "pnm", "tga", "ttf", "webp", "bmp", "farb", "farbfeld"];
@@ -25,9 +37,42 @@ fn clear_screen() {
 }
 
 fn main() {
+    let args = Args::parse();
+    
     let conf_path: PathBuf = home_dir()
         .expect("Error getting home dir")
         .join(".config/bgc/config.conf");
+
+    if args.set {
+        let cfc: String = fs::read_to_string(conf_path.clone())
+            .expect("Error reading to string");
+        let mut wall_path: PathBuf = PathBuf::new();
+
+        for line in cfc.lines() {
+            if line.trim().starts_with("prev_wallpaper") {
+                let wallpapers_path_s: &str = line
+                    .split('=')
+                    .nth(1)
+                    .expect("No wallpaper_path on config file");
+
+                wall_path = PathBuf::from(wallpapers_path_s.trim());
+            }
+        }
+
+        match Command::new("swww")
+            .arg("img")
+            .arg(&wall_path)
+            .arg("--transition-step")
+            .arg("30")
+            .arg("--transition-fps")
+            .arg("60")
+            .spawn() {
+                Ok(child) => child,
+                Err(err) => panic!("Swww not installed\n{}", err),
+            };
+
+        exit(0);
+    }
 
     if !conf_path.exists() {
         let mut w_input: String = String::new();
@@ -72,10 +117,11 @@ fn main() {
         clear_screen();
     } 
 
-    let config_file_contents: String = fs::read_to_string(conf_path)
+    let config_file_contents: String = fs::read_to_string(conf_path.clone())
                                 .unwrap();
     
     let mut wallpapers_path: PathBuf = PathBuf::new();
+    let mut other_wall: bool = false;
 
     for line in config_file_contents.lines() {
         if line.trim().starts_with("wallpaper_path") {
@@ -84,6 +130,9 @@ fn main() {
                 .nth(1)
                 .expect("No wallpaper_path on config file");
             wallpapers_path = PathBuf::from(wallpapers_path_s.trim());
+        }
+        if line.trim().starts_with("prev_wallpaper") {
+            other_wall = true;
         }
     }
 
@@ -181,5 +230,40 @@ fn main() {
                 Ok(child) => child,
                 Err(err) => panic!("Swww not installed\n{}", err),
             };
+
+    if other_wall {
+        let contents = fs::read_to_string(conf_path.clone())
+            .expect("Couldn't read config path");
+
+        let repl = contents
+            .trim()
+            .split('=')
+            .last()
+            .expect("There was no =");
+        
+        let new_data_file = contents.replace(repl, &image_path);
+
+        let mut w_file = fs::OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(conf_path)
+            .expect("Couldn't replace text from older file");
+        
+        w_file.write(new_data_file.as_bytes())
+            .expect("Error writing data to file");
+    } else {
+        let new_data_file: String = "prev_wallpaper = ".to_string() + &image_path;
+        
+        fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(conf_path)
+            .expect("Couldn't replace text from older file")
+            .write(new_data_file.as_bytes())
+            .expect("Error writing data to file");
+    }
+    
+
+
 
 }
