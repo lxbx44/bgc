@@ -8,7 +8,7 @@ use std::{
 };
 use dirs::home_dir;
 use terminal_menu::{menu, button, run, mut_menu, label};
-use clap::Parser;
+use clap::{Parser, Command};
 
 
 /// A program written in Rust to change wallpapers in wayland using swww
@@ -58,6 +58,13 @@ fn main() {
                 wall_path = PathBuf::from(wallpapers_path_s.trim());
             }
         }
+
+        match Command::new("swww")
+                .arg("init")
+                .spawn() {
+                    Ok(child) => child,
+                    Err(err) => panic!("Swww not installed\n{}", err),
+                };
 
         match Command::new("swww")
             .arg("img")
@@ -113,6 +120,14 @@ fn main() {
             Ok(()) => (),
             Err(err) => panic!("Error flushing file\n{}", err),
         };
+
+        match Command::new("swww")
+            .arg("init")
+            .spawn() {
+                Ok(child) => child,
+                Err(err) => panic!("Swww not installed\n{}", err),
+            };
+
 
         clear_screen();
     } 
