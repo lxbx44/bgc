@@ -1,14 +1,31 @@
-use core::panic;
 use std::{
-    io::{stdin, Write},
+    io::{
+        stdin, 
+        Write
+    },
     path::PathBuf,
-    process::exit,
-    fs::{self, File},
-    process::Command
+    process::{
+        exit,
+        Command
+    },
+    fs::{
+        self, 
+        File
+    },
 };
-use dirs::home_dir;
-use terminal_menu::{menu, button, run, mut_menu, label};
+
+use terminal_menu::{
+    menu, 
+    button, 
+    run, 
+    mut_menu, 
+    label
+};
+
 use clap::Parser;
+
+use dirs::config_dir;
+use core::panic;
 
 
 /// A program written in Rust to change wallpapers in wayland using swww
@@ -32,16 +49,15 @@ fn is_img(file_path: &PathBuf) -> bool {
     false
 }
 
-fn clear_screen() {
-    print!("\x1B[2J\x1B[1;1H");
-}
-
 fn main() {
     let args = Args::parse();
-    
-    let conf_path: PathBuf = home_dir()
-        .expect("Error getting home dir")
-        .join(".config/bgc/config.conf");
+
+    let mut conf_path: PathBuf = PathBuf::new();
+
+    if let Some(pth) = config_dir() {
+        conf_path = pth
+            .join("bgc/config.conf");
+    }
 
     if args.set {
         let cfc: String = fs::read_to_string(conf_path.clone())
@@ -98,7 +114,7 @@ fn main() {
 
         match fs::DirBuilder::new()
             .recursive(true)
-            .create(home_dir().expect("Error getting home directory").join(".config/bgc/")) {
+            .create(config_dir().expect("Error getting config directory").join("bgc/")) {
                 Ok(()) => (),
                 Err(error) => panic!("Error creating directory: {}", error),
             };
@@ -130,7 +146,10 @@ fn main() {
             };
 
 
-        clear_screen();
+        match clearscreen::clear() {
+            Ok(()) => (),
+            Err(e) => eprintln!("Error cleaning screen\n{}", e),
+        };
     } 
 
     let config_file_contents: String = fs::read_to_string(conf_path.clone())

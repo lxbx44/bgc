@@ -7,6 +7,7 @@ authors = ["Aria Fibla"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.4.11", features = ["derive"] }
-dirs = "5.0.1"
-terminal-menu = "3.0.0"
+clap = { version = "4.4.14", features = ["derive"] }
+clearscreen = { version = "2.0.1" }
+dirs = { version = "5.0.1" }
+terminal-menu = { version = "3.0.0" }
